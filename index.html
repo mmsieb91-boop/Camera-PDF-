@@ -7,8 +7,11 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;800&display=swap" rel="stylesheet">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js">
-    </script>
+    <!-- jsPDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <!-- Cropper.js (محرر الصور الحديث) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.js"></script>
     <style>
         *,
         *::before,
@@ -137,31 +140,60 @@
             display: none;
         }
 
-        /* ── CAMERA BUTTON ──────────────────────── */
-        .camera-btn-row {
+        /* ── CAMERA CARD (مفصول الآن) ──────────── */
+        .camera-card {
             display: flex;
-            justify-content: center;
-            margin-top: 16px;
+            align-items: center;
+            justify-content: space-between;
+            gap: 14px;
+            padding: 18px 20px;
+        }
+        .camera-card .cam-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex: 1;
+        }
+        .camera-card .cam-icon-box {
+            width: 46px;
+            height: 46px;
+            border-radius: 12px;
+            background: linear-gradient(135deg, rgba(244,185,66,0.18), rgba(61,155,233,0.18));
+            display: grid;
+            place-items: center;
+            font-size: 1.3rem;
+            border: 1px solid var(--border);
+            flex-shrink: 0;
+        }
+        .camera-card .cam-text-title {
+            font-size: 0.98rem;
+            font-weight: 700;
+            margin-bottom: 2px;
+        }
+        .camera-card .cam-text-sub {
+            font-size: 0.78rem;
+            color: var(--muted);
         }
         .btn-camera {
-            background: var(--card);
-            border: 1px solid var(--border);
-            color: var(--text);
+            background: linear-gradient(135deg, var(--accent2), #2B7CC5);
+            border: none;
+            color: #fff;
             font-family: 'Cairo', sans-serif;
             font-size: 0.9rem;
-            font-weight: 600;
-            padding: 10px 24px;
+            font-weight: 700;
+            padding: 11px 20px;
             border-radius: 30px;
             cursor: pointer;
             display: flex;
             align-items: center;
             gap: 8px;
             transition: all 0.2s;
+            white-space: nowrap;
+            box-shadow: 0 3px 12px rgba(61,155,233,0.25);
         }
         .btn-camera:hover {
-            background: var(--accent2);
-            border-color: var(--accent2);
-            color: #fff;
+            transform: translateY(-1px);
+            box-shadow: 0 5px 18px rgba(61,155,233,0.4);
         }
 
         /* ── NAME INPUT ─────────────────────────── */
@@ -227,7 +259,7 @@
 
         .preview-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
             gap: 10px;
         }
         .preview-item {
@@ -237,6 +269,24 @@
             overflow: hidden;
             background: var(--card);
             border: 1px solid var(--border);
+            cursor: pointer;
+            transition: border-color 0.2s, transform 0.15s;
+        }
+        .preview-item:hover {
+            border-color: var(--accent2);
+            transform: translateY(-2px);
+        }
+        .preview-item.edited::after {
+            content: '✓ معدّلة';
+            position: absolute;
+            top: 4px;
+            right: 4px;
+            background: rgba(52, 201, 139, 0.9);
+            color: #fff;
+            font-size: 0.62rem;
+            font-weight: 700;
+            padding: 2px 6px;
+            border-radius: 4px;
         }
         .preview-item img {
             width: 100%;
@@ -248,19 +298,37 @@
             position: absolute;
             top: 4px;
             left: 4px;
-            width: 20px;
-            height: 20px;
+            width: 22px;
+            height: 22px;
             background: rgba(224, 92, 106, 0.9);
             border: none;
             border-radius: 50%;
             cursor: pointer;
             font-size: 0.7rem;
             color: white;
-            line-height: 20px;
+            line-height: 22px;
             text-align: center;
             display: flex;
             align-items: center;
             justify-content: center;
+            z-index: 2;
+        }
+        .preview-edit-hint {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(transparent, rgba(0,0,0,0.7));
+            color: #fff;
+            font-size: 0.7rem;
+            font-weight: 600;
+            padding: 14px 4px 6px;
+            text-align: center;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+        .preview-item:hover .preview-edit-hint {
+            opacity: 1;
         }
         .preview-num {
             position: absolute;
@@ -272,6 +340,7 @@
             font-weight: 700;
             padding: 2px 6px;
             border-radius: 4px;
+            z-index: 1;
         }
 
         /* ── CONVERT BUTTON ─────────────────────── */
@@ -346,6 +415,11 @@
             background: rgba(52, 201, 139, 0.15);
             color: var(--success);
             border: 1px solid rgba(52, 201, 139, 0.3);
+        }
+        #flash.info {
+            background: rgba(61, 155, 233, 0.15);
+            color: var(--accent2);
+            border: 1px solid rgba(61, 155, 233, 0.3);
         }
 
         /* ── CAMERA MODAL ───────────────────────── */
@@ -422,6 +496,236 @@
             text-align: center;
         }
 
+        /* ══════════════════════════════════════════
+           EDITOR MODAL (محرر الصور الحديث)
+           ══════════════════════════════════════════ */
+        #editorModal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 25, 35, 0.97);
+            z-index: 10000;
+            flex-direction: column;
+            padding: 12px;
+            backdrop-filter: blur(4px);
+        }
+        #editorModal.open { display: flex; }
+
+        .editor-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 6px 10px 14px;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 12px;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .editor-title {
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--text);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .editor-close {
+            background: rgba(224, 92, 106, 0.18);
+            border: 1px solid var(--danger);
+            color: var(--danger);
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 1rem;
+            display: grid;
+            place-items: center;
+        }
+
+        /* Mode tabs */
+        .editor-tabs {
+            display: flex;
+            gap: 6px;
+            margin-bottom: 12px;
+            flex-wrap: wrap;
+        }
+        .editor-tab {
+            background: var(--card);
+            border: 1px solid var(--border);
+            color: var(--muted);
+            font-family: 'Cairo', sans-serif;
+            font-weight: 600;
+            font-size: 0.82rem;
+            padding: 8px 14px;
+            border-radius: 22px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .editor-tab.active {
+            background: var(--accent2);
+            color: #fff;
+            border-color: var(--accent2);
+        }
+
+        /* Editor stage */
+        .editor-stage {
+            flex: 1;
+            min-height: 0;
+            background: #0a1117;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            overflow: hidden;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        #editorImage {
+            display: block;
+            max-width: 100%;
+            max-height: 100%;
+        }
+
+        /* Manual perspective stage (canvas + 4 corners) */
+        #manualStage {
+            position: absolute;
+            inset: 0;
+            display: none;
+            align-items: center;
+            justify-content: center;
+        }
+        #manualStage.active { display: flex; }
+        #manualCanvas {
+            max-width: 100%;
+            max-height: 100%;
+            display: block;
+        }
+        .corner-layer {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+        }
+        .corner-handle {
+            position: absolute;
+            width: 28px;
+            height: 28px;
+            background: rgba(244, 185, 66, 0.95);
+            border: 3px solid #fff;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            cursor: grab;
+            pointer-events: auto;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.5);
+            touch-action: none;
+        }
+        .corner-handle:active { cursor: grabbing; background: var(--accent2); }
+        .corner-handle::after {
+            content: '';
+            position: absolute;
+            inset: 6px;
+            background: #fff;
+            border-radius: 50%;
+        }
+
+        /* Editor controls panel */
+        .editor-controls {
+            margin-top: 12px;
+            padding: 14px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            max-height: 40vh;
+            overflow-y: auto;
+        }
+        .ctrl-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            align-items: center;
+        }
+        .ctrl-btn {
+            background: var(--card);
+            border: 1px solid var(--border);
+            color: var(--text);
+            font-family: 'Cairo', sans-serif;
+            font-weight: 600;
+            font-size: 0.82rem;
+            padding: 9px 14px;
+            border-radius: 10px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.15s;
+        }
+        .ctrl-btn:hover { background: var(--accent2); border-color: var(--accent2); color: #fff; }
+        .ctrl-btn.primary {
+            background: linear-gradient(135deg, var(--accent2), #2B7CC5);
+            border-color: var(--accent2);
+            color: #fff;
+        }
+        .ctrl-btn.success {
+            background: linear-gradient(135deg, var(--success), #29A973);
+            border-color: var(--success);
+            color: #fff;
+        }
+        .ctrl-btn.warn {
+            background: rgba(244, 185, 66, 0.15);
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+        .slider-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.82rem;
+        }
+        .slider-row label {
+            min-width: 70px;
+            color: var(--muted);
+            font-weight: 600;
+        }
+        .slider-row input[type=range] {
+            flex: 1;
+            accent-color: var(--accent2);
+        }
+        .slider-row .val {
+            min-width: 40px;
+            text-align: center;
+            color: var(--accent);
+            font-weight: 700;
+        }
+
+        /* Filter chips */
+        .filter-chips {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+        .filter-chip {
+            background: var(--card);
+            border: 1px solid var(--border);
+            color: var(--text);
+            font-family: 'Cairo', sans-serif;
+            font-size: 0.78rem;
+            font-weight: 600;
+            padding: 7px 12px;
+            border-radius: 18px;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        .filter-chip.active {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: #1C2B3A;
+        }
+
         /* ── FOOTER ─────────────────────────────── */
         footer {
             text-align: center;
@@ -430,6 +734,9 @@
             color: var(--muted);
             opacity: 0.6;
         }
+
+        /* Cropper RTL fix */
+        .cropper-container { direction: ltr; }
     </style>
 </head>
 <body>
@@ -444,17 +751,26 @@
 
     <div id="flash"></div>
 
-    <!-- Upload Zone -->
+    <!-- Upload Zone (بدون زر الكاميرا الآن) -->
     <div class="card upload-zone" id="uploadZone">
         <div class="upload-icon">📎</div>
         <p class="upload-title">اسحب وأفلت الصور هنا</p>
         <p class="upload-sub">أو اضغط للاختيار · JPG, PNG, WEBP · حتى 20 صورة</p>
         <input type="file" id="fileInput" accept=".jpg,.jpeg,.png,.webp" multiple>
-        <div class="camera-btn-row">
-            <button class="btn-camera" id="openCameraBtn">
-                📷 تصوير مستند بالكاميرا
-            </button>
+    </div>
+
+    <!-- Camera Card (مفصول الآن في كارد مستقل) -->
+    <div class="card camera-card">
+        <div class="cam-info">
+            <div class="cam-icon-box">📷</div>
+            <div>
+                <div class="cam-text-title">تصوير مباشر بالكاميرا</div>
+                <div class="cam-text-sub">التقط المستند مباشرة لمعالجته فوراً</div>
+            </div>
         </div>
+        <button class="btn-camera" id="openCameraBtn">
+            📸 فتح الكاميرا
+        </button>
     </div>
 
     <!-- Name Input -->
@@ -466,7 +782,7 @@
     <!-- Preview Section -->
     <div id="previewSection">
         <div class="section-header">
-            <span class="section-title">الصور المختارة (<span id="imgCount">0</span>)</span>
+            <span class="section-title">الصور المختارة (<span id="imgCount">0</span>) — اضغط على أي صورة لتعديلها</span>
             <button class="clear-btn" id="clearBtn">مسح الكل</button>
         </div>
         <div class="preview-grid" id="previewGrid"></div>
@@ -494,6 +810,43 @@
         </div>
     </div>
 
+    <!-- ════════════════════════════════════════════
+         EDITOR MODAL — محرر الصور الحديث
+         ════════════════════════════════════════════ -->
+    <div id="editorModal">
+        <div class="editor-header">
+            <div class="editor-title">
+                <span>🛠️</span>
+                <span>تعديل الصورة قبل التحويل</span>
+            </div>
+            <button class="editor-close" id="editorCloseBtn" title="إغلاق">✕</button>
+        </div>
+
+        <div class="editor-tabs">
+            <button class="editor-tab active" data-mode="crop">✂️ قص وتدوير</button>
+            <button class="editor-tab" data-mode="manual">📐 محاذاة يدوية</button>
+            <button class="editor-tab" data-mode="auto">⚡ محاذاة تلقائية</button>
+            <button class="editor-tab" data-mode="filter">🎨 فلاتر وتحسين</button>
+        </div>
+
+        <div class="editor-stage">
+            <img id="editorImage" alt="">
+            <div id="manualStage">
+                <canvas id="manualCanvas"></canvas>
+                <div class="corner-layer" id="cornerLayer">
+                    <div class="corner-handle" data-corner="0"></div>
+                    <div class="corner-handle" data-corner="1"></div>
+                    <div class="corner-handle" data-corner="2"></div>
+                    <div class="corner-handle" data-corner="3"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="editor-controls" id="editorControls">
+            <!-- Dynamic content per mode -->
+        </div>
+    </div>
+
     <footer>
         <p>WebScan · يعمل بالكامل في المتصفح · لا يتم رفع أي بيانات</p>
     </footer>
@@ -503,15 +856,28 @@
         //  STATE
         // ══════════════════════════════════════════
         let cvReady = false;
-        let selectedFiles = [];
+        let selectedFiles = []; // Array of { file, edited, originalFile }
         const MAX_FILES = 20;
         const A4_W = 1240,
             A4_H = 1754; // A4 at ~150 DPI
 
         // Camera state
         let cameraStream = null;
-        let cameraFacingMode = 'environment'; // back camera for documents
+        let cameraFacingMode = 'environment';
         let cameraModalOpen = false;
+
+        // Editor state
+        let editorOpen = false;
+        let editorIndex = -1;       // index in selectedFiles
+        let cropperInstance = null;
+        let editorMode = 'crop';
+        let editorBaseImage = null; // HTMLImageElement of source
+        let manualCorners = [];     // [{x,y}] in canvas coords
+        let manualImageBitmap = null;
+        let manualScale = 1;
+        let manualCanvasOffset = { x: 0, y: 0 };
+        let activeFilter = 'none';
+        let filterValues = { brightness: 100, contrast: 100, saturate: 100 };
 
         // ══════════════════════════════════════════
         //  OPENCV.JS LOADING
@@ -558,19 +924,24 @@
         function renderPreviews() {
             const grid = document.getElementById('previewGrid');
             grid.innerHTML = '';
-            selectedFiles.forEach((file, idx) => {
-                const url = URL.createObjectURL(file);
+            selectedFiles.forEach((entry, idx) => {
+                const url = URL.createObjectURL(entry.file);
                 const item = document.createElement('div');
-                item.className = 'preview-item';
+                item.className = 'preview-item' + (entry.edited ? ' edited' : '');
                 item.innerHTML = `
-              <img src="${url}" alt="صورة ${idx+1}" onload="URL.revokeObjectURL(this.src)">
-              <button class="preview-remove" title="حذف">✕</button>
-              <span class="preview-num">${idx + 1}</span>
-            `;
-                item.querySelector('.preview-remove').addEventListener('click', () => {
+                    <img src="${url}" alt="صورة ${idx+1}" onload="URL.revokeObjectURL(this.src)">
+                    <button class="preview-remove" title="حذف">✕</button>
+                    <span class="preview-num">${idx + 1}</span>
+                    <div class="preview-edit-hint">🛠️ اضغط للتعديل</div>
+                `;
+                // Remove handler
+                item.querySelector('.preview-remove').addEventListener('click', (e) => {
+                    e.stopPropagation();
                     selectedFiles.splice(idx, 1);
                     updateUI();
                 });
+                // Open editor on click
+                item.addEventListener('click', () => openEditor(idx));
                 grid.appendChild(item);
             });
         }
@@ -584,35 +955,48 @@
                 const ext = f.name.slice(f.name.lastIndexOf('.')).toLowerCase();
                 return allowed.includes(ext);
             });
-            if (!valid.length) { showFlash('صيغة غير مدعومة. استخدم JPG أو PNG أو WEBP');
-                return; }
+            if (!valid.length) {
+                showFlash('صيغة غير مدعومة. استخدم JPG أو PNG أو WEBP');
+                return;
+            }
             const remaining = MAX_FILES - selectedFiles.length;
-            if (remaining <= 0) { showFlash(`الحد الأقصى ${MAX_FILES} صورة`);
-                return; }
+            if (remaining <= 0) {
+                showFlash(`الحد الأقصى ${MAX_FILES} صورة`);
+                return;
+            }
             const toAdd = valid.slice(0, remaining);
-            if (valid.length > remaining) showFlash(`تم إضافة ${toAdd.length} صورة فقط (الحد ${MAX_FILES})`,
-                'error');
-            selectedFiles.push(...toAdd);
+            if (valid.length > remaining) {
+                showFlash(`تم إضافة ${toAdd.length} صورة فقط (الحد ${MAX_FILES})`, 'error');
+            }
+            toAdd.forEach(f => {
+                selectedFiles.push({ file: f, edited: false, originalFile: f });
+            });
             updateUI();
         }
 
-        document.getElementById('uploadZone').addEventListener('click', (e) => {
-            // Don't trigger file input if camera button was clicked
-            if (e.target.closest('#openCameraBtn')) return;
+        document.getElementById('uploadZone').addEventListener('click', () => {
             document.getElementById('fileInput').click();
         });
-        document.getElementById('fileInput').addEventListener('change', e => { addFiles(e.target.files);
-            e.target.value = ''; });
-        document.getElementById('clearBtn').addEventListener('click', () => { selectedFiles = [];
-            updateUI(); });
+        document.getElementById('fileInput').addEventListener('change', e => {
+            addFiles(e.target.files);
+            e.target.value = '';
+        });
+        document.getElementById('clearBtn').addEventListener('click', () => {
+            selectedFiles = [];
+            updateUI();
+        });
 
         const zone = document.getElementById('uploadZone');
-        zone.addEventListener('dragover', e => { e.preventDefault();
-            zone.classList.add('drag-over'); });
+        zone.addEventListener('dragover', e => {
+            e.preventDefault();
+            zone.classList.add('drag-over');
+        });
         zone.addEventListener('dragleave', () => zone.classList.remove('drag-over'));
-        zone.addEventListener('drop', e => { e.preventDefault();
+        zone.addEventListener('drop', e => {
+            e.preventDefault();
             zone.classList.remove('drag-over');
-            addFiles(e.dataTransfer.files); });
+            addFiles(e.dataTransfer.files);
+        });
 
         // ══════════════════════════════════════════
         //  CAMERA MODAL LOGIC
@@ -630,7 +1014,6 @@
                 return;
             }
             try {
-                // Stop any existing stream
                 stopCameraStream();
                 const constraints = {
                     video: {
@@ -673,7 +1056,6 @@
             canvas.width = video.videoWidth || 1920;
             canvas.height = video.videoHeight || 1080;
             const ctx = canvas.getContext('2d');
-            // Flip horizontally if using front camera
             if (cameraFacingMode === 'user') {
                 ctx.translate(canvas.width, 0);
                 ctx.scale(-1, 1);
@@ -687,7 +1069,6 @@
                 }
                 const file = new File([blob], `camera_capture_${Date.now()}.jpg`, { type: 'image/jpeg' });
                 addFiles([file]);
-                // Flash effect
                 cameraVideo.style.opacity = '0.3';
                 setTimeout(() => { cameraVideo.style.opacity = '1'; }, 150);
             }, 'image/jpeg', 0.92);
@@ -697,28 +1078,23 @@
             cameraFacingMode = cameraFacingMode === 'environment' ? 'user' : 'environment';
             if (cameraModalOpen) {
                 stopCameraStream();
-                // Small delay before reopening
                 await new Promise(r => setTimeout(r, 200));
                 await openCamera();
             }
         }
 
-        openCameraBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            openCamera();
-        });
+        openCameraBtn.addEventListener('click', openCamera);
         closeCameraBtn.addEventListener('click', stopCameraStream);
         captureBtn.addEventListener('click', capturePhoto);
         switchCameraBtn.addEventListener('click', switchCamera);
 
-        // Close modal on Escape key
         document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape' && cameraModalOpen) {
-                stopCameraStream();
+            if (e.key === 'Escape') {
+                if (editorOpen) closeEditor();
+                else if (cameraModalOpen) stopCameraStream();
             }
         });
 
-        // Stop camera when page hides (mobile browser optimization)
         document.addEventListener('visibilitychange', () => {
             if (document.hidden && cameraModalOpen) {
                 stopCameraStream();
@@ -726,7 +1102,549 @@
         });
 
         // ══════════════════════════════════════════
-        //  IMAGE LOADING
+        //  IMAGE EDITOR — MAIN
+        // ══════════════════════════════════════════
+        const editorModal = document.getElementById('editorModal');
+        const editorImg = document.getElementById('editorImage');
+        const editorControls = document.getElementById('editorControls');
+        const manualStage = document.getElementById('manualStage');
+        const manualCanvas = document.getElementById('manualCanvas');
+        const cornerLayer = document.getElementById('cornerLayer');
+        const editorTabs = document.querySelectorAll('.editor-tab');
+        document.getElementById('editorCloseBtn').addEventListener('click', closeEditor);
+
+        editorTabs.forEach(tab => {
+            tab.addEventListener('click', () => switchEditorMode(tab.dataset.mode));
+        });
+
+        async function openEditor(index) {
+            editorIndex = index;
+            const entry = selectedFiles[index];
+            const url = URL.createObjectURL(entry.file);
+
+            editorBaseImage = await new Promise((resolve, reject) => {
+                const img = new Image();
+                img.onload = () => resolve(img);
+                img.onerror = reject;
+                img.src = url;
+            });
+
+            // Reset state
+            activeFilter = 'none';
+            filterValues = { brightness: 100, contrast: 100, saturate: 100 };
+
+            editorModal.classList.add('open');
+            editorOpen = true;
+            switchEditorMode('crop');
+        }
+
+        function closeEditor() {
+            destroyCropper();
+            editorModal.classList.remove('open');
+            editorOpen = false;
+            editorIndex = -1;
+            if (editorBaseImage && editorBaseImage.src && editorBaseImage.src.startsWith('blob:')) {
+                URL.revokeObjectURL(editorBaseImage.src);
+            }
+            editorBaseImage = null;
+        }
+
+        function destroyCropper() {
+            if (cropperInstance) {
+                cropperInstance.destroy();
+                cropperInstance = null;
+            }
+        }
+
+        function switchEditorMode(mode) {
+            editorMode = mode;
+            editorTabs.forEach(t => t.classList.toggle('active', t.dataset.mode === mode));
+
+            destroyCropper();
+            manualStage.classList.remove('active');
+            editorImg.style.display = 'none';
+            editorImg.style.filter = '';
+
+            if (mode === 'crop') initCropMode();
+            else if (mode === 'manual') initManualMode();
+            else if (mode === 'auto') initAutoMode();
+            else if (mode === 'filter') initFilterMode();
+        }
+
+        // ── MODE 1: CROP & ROTATE (Cropper.js) ──
+        function initCropMode() {
+            editorImg.src = editorBaseImage.src;
+            editorImg.style.display = 'block';
+
+            cropperInstance = new Cropper(editorImg, {
+                viewMode: 1,
+                autoCropArea: 1,
+                background: false,
+                responsive: true,
+                checkOrientation: false,
+            });
+
+            editorControls.innerHTML = `
+                <div class="ctrl-row">
+                    <button class="ctrl-btn" id="rotL">↺ يسار 90°</button>
+                    <button class="ctrl-btn" id="rotR">↻ يمين 90°</button>
+                    <button class="ctrl-btn" id="flipH">⇋ قلب أفقي</button>
+                    <button class="ctrl-btn" id="flipV">⇵ قلب رأسي</button>
+                    <button class="ctrl-btn" id="resetC">🔄 إعادة تعيين</button>
+                </div>
+                <div class="slider-row">
+                    <label>تدوير دقيق</label>
+                    <input type="range" id="fineRot" min="-45" max="45" step="1" value="0">
+                    <span class="val" id="fineRotVal">0°</span>
+                </div>
+                <div class="ctrl-row" style="justify-content: flex-end;">
+                    <button class="ctrl-btn success" id="applyCrop">✓ تطبيق وحفظ</button>
+                </div>
+            `;
+
+            document.getElementById('rotL').onclick = () => cropperInstance.rotate(-90);
+            document.getElementById('rotR').onclick = () => cropperInstance.rotate(90);
+            document.getElementById('flipH').onclick = () => {
+                const data = cropperInstance.getData();
+                cropperInstance.scaleX(-cropperInstance.getData().scaleX || -1);
+            };
+            document.getElementById('flipV').onclick = () => {
+                cropperInstance.scaleY(-cropperInstance.getData().scaleY || -1);
+            };
+            document.getElementById('resetC').onclick = () => cropperInstance.reset();
+
+            const fineRot = document.getElementById('fineRot');
+            const fineRotVal = document.getElementById('fineRotVal');
+            let lastFine = 0;
+            fineRot.oninput = () => {
+                const val = parseInt(fineRot.value);
+                cropperInstance.rotate(val - lastFine);
+                lastFine = val;
+                fineRotVal.textContent = val + '°';
+            };
+
+            document.getElementById('applyCrop').onclick = applyCropResult;
+        }
+
+        async function applyCropResult() {
+            if (!cropperInstance) return;
+            const canvas = cropperInstance.getCroppedCanvas({
+                maxWidth: 4096,
+                maxHeight: 4096,
+                imageSmoothingQuality: 'high',
+                fillColor: '#fff'
+            });
+            await commitEditedCanvas(canvas);
+        }
+
+        // ── MODE 2: MANUAL PERSPECTIVE (4 corners) ──
+        function initManualMode() {
+            manualStage.classList.add('active');
+            const stage = manualStage;
+            const sw = stage.clientWidth;
+            const sh = stage.clientHeight;
+
+            // Compute scale to fit image into stage
+            const iw = editorBaseImage.naturalWidth;
+            const ih = editorBaseImage.naturalHeight;
+            const scale = Math.min(sw / iw, sh / ih, 1);
+            manualScale = scale;
+            const cw = Math.floor(iw * scale);
+            const ch = Math.floor(ih * scale);
+
+            manualCanvas.width = cw;
+            manualCanvas.height = ch;
+            manualCanvas.style.width = cw + 'px';
+            manualCanvas.style.height = ch + 'px';
+
+            const ctx = manualCanvas.getContext('2d');
+            ctx.drawImage(editorBaseImage, 0, 0, cw, ch);
+
+            // Try auto-detect corners as starting point
+            let detected = null;
+            if (cvReady) {
+                try {
+                    const tmpCanvas = document.createElement('canvas');
+                    tmpCanvas.width = iw;
+                    tmpCanvas.height = ih;
+                    tmpCanvas.getContext('2d').drawImage(editorBaseImage, 0, 0);
+                    const corners = detectCornersOnly(tmpCanvas);
+                    if (corners) {
+                        // Scale to canvas coords
+                        detected = corners.map(p => ({ x: p.x * scale, y: p.y * scale }));
+                    }
+                } catch (e) { console.warn('Auto-detect failed:', e); }
+            }
+
+            if (!detected) {
+                // Default: inset 10% from each edge
+                const inset = 0.08;
+                detected = [
+                    { x: cw * inset, y: ch * inset },
+                    { x: cw * (1 - inset), y: ch * inset },
+                    { x: cw * (1 - inset), y: ch * (1 - inset) },
+                    { x: cw * inset, y: ch * (1 - inset) },
+                ];
+            }
+            manualCorners = detected;
+
+            // Position corner layer to match canvas
+            const stageRect = stage.getBoundingClientRect();
+            const canvasRect = manualCanvas.getBoundingClientRect();
+            cornerLayer.style.left = (canvasRect.left - stageRect.left) + 'px';
+            cornerLayer.style.top = (canvasRect.top - stageRect.top) + 'px';
+            cornerLayer.style.width = cw + 'px';
+            cornerLayer.style.height = ch + 'px';
+
+            renderCorners();
+            attachCornerHandlers();
+            redrawManual();
+
+            editorControls.innerHTML = `
+                <div class="ctrl-row">
+                    <button class="ctrl-btn warn" id="autoDetectBtn">⚡ كشف الحدود تلقائياً</button>
+                    <button class="ctrl-btn" id="resetCornersBtn">🔄 إعادة الزوايا</button>
+                </div>
+                <div class="ctrl-row" style="font-size: 0.8rem; color: var(--muted);">
+                    💡 اسحب النقاط الأربع الذهبية لتحديد زوايا المستند بدقة
+                </div>
+                <div class="ctrl-row" style="justify-content: flex-end;">
+                    <button class="ctrl-btn success" id="applyManual">✓ تطبيق التصحيح</button>
+                </div>
+            `;
+
+            document.getElementById('autoDetectBtn').onclick = () => {
+                if (!cvReady) { showFlash('OpenCV لم يكتمل تحميله بعد.'); return; }
+                try {
+                    const tmpCanvas = document.createElement('canvas');
+                    tmpCanvas.width = iw;
+                    tmpCanvas.height = ih;
+                    tmpCanvas.getContext('2d').drawImage(editorBaseImage, 0, 0);
+                    const corners = detectCornersOnly(tmpCanvas);
+                    if (corners) {
+                        manualCorners = corners.map(p => ({ x: p.x * scale, y: p.y * scale }));
+                        renderCorners();
+                        redrawManual();
+                        showFlash('تم كشف الحدود ✓', 'success');
+                    } else {
+                        showFlash('لم يتم العثور على حدود واضحة. عدّل الزوايا يدوياً.', 'info');
+                    }
+                } catch (e) { showFlash('فشل الكشف التلقائي.'); }
+            };
+
+            document.getElementById('resetCornersBtn').onclick = () => {
+                const inset = 0.08;
+                manualCorners = [
+                    { x: cw * inset, y: ch * inset },
+                    { x: cw * (1 - inset), y: ch * inset },
+                    { x: cw * (1 - inset), y: ch * (1 - inset) },
+                    { x: cw * inset, y: ch * (1 - inset) },
+                ];
+                renderCorners();
+                redrawManual();
+            };
+
+            document.getElementById('applyManual').onclick = applyManualPerspective;
+        }
+
+        function renderCorners() {
+            const handles = cornerLayer.querySelectorAll('.corner-handle');
+            handles.forEach((h, i) => {
+                h.style.left = manualCorners[i].x + 'px';
+                h.style.top = manualCorners[i].y + 'px';
+            });
+        }
+
+        function redrawManual() {
+            const ctx = manualCanvas.getContext('2d');
+            ctx.clearRect(0, 0, manualCanvas.width, manualCanvas.height);
+            ctx.drawImage(editorBaseImage, 0, 0, manualCanvas.width, manualCanvas.height);
+
+            // Draw polygon
+            ctx.beginPath();
+            ctx.moveTo(manualCorners[0].x, manualCorners[0].y);
+            for (let i = 1; i < 4; i++) ctx.lineTo(manualCorners[i].x, manualCorners[i].y);
+            ctx.closePath();
+
+            // Semi-transparent overlay outside polygon
+            ctx.save();
+            ctx.fillStyle = 'rgba(15, 25, 35, 0.55)';
+            ctx.beginPath();
+            ctx.rect(0, 0, manualCanvas.width, manualCanvas.height);
+            ctx.moveTo(manualCorners[0].x, manualCorners[0].y);
+            for (let i = 3; i >= 0; i--) ctx.lineTo(manualCorners[i].x, manualCorners[i].y);
+            ctx.closePath();
+            ctx.fill('evenodd');
+            ctx.restore();
+
+            // Polygon outline
+            ctx.beginPath();
+            ctx.moveTo(manualCorners[0].x, manualCorners[0].y);
+            for (let i = 1; i < 4; i++) ctx.lineTo(manualCorners[i].x, manualCorners[i].y);
+            ctx.closePath();
+            ctx.strokeStyle = '#F4B942';
+            ctx.lineWidth = 2.5;
+            ctx.stroke();
+        }
+
+        function attachCornerHandlers() {
+            const handles = cornerLayer.querySelectorAll('.corner-handle');
+            handles.forEach(h => {
+                let dragging = false;
+                const idx = parseInt(h.dataset.corner);
+
+                const onStart = (e) => {
+                    e.preventDefault();
+                    dragging = true;
+                    h.style.cursor = 'grabbing';
+                };
+                const onMove = (e) => {
+                    if (!dragging) return;
+                    const point = e.touches ? e.touches[0] : e;
+                    const rect = manualCanvas.getBoundingClientRect();
+                    let x = point.clientX - rect.left;
+                    let y = point.clientY - rect.top;
+                    x = Math.max(0, Math.min(manualCanvas.width, x));
+                    y = Math.max(0, Math.min(manualCanvas.height, y));
+                    manualCorners[idx] = { x, y };
+                    h.style.left = x + 'px';
+                    h.style.top = y + 'px';
+                    redrawManual();
+                };
+                const onEnd = () => { dragging = false; h.style.cursor = 'grab'; };
+
+                h.addEventListener('mousedown', onStart);
+                document.addEventListener('mousemove', onMove);
+                document.addEventListener('mouseup', onEnd);
+                h.addEventListener('touchstart', onStart, { passive: false });
+                document.addEventListener('touchmove', onMove, { passive: false });
+                document.addEventListener('touchend', onEnd);
+            });
+        }
+
+        async function applyManualPerspective() {
+            if (!cvReady) {
+                showFlash('OpenCV لم يكتمل تحميله بعد.');
+                return;
+            }
+            // Convert canvas-coords corners back to original image coords
+            const origPts = manualCorners.map(p => ({
+                x: p.x / manualScale,
+                y: p.y / manualScale
+            }));
+            const ordered = orderPoints(origPts.slice());
+            const [tl, tr, br, bl] = ordered;
+
+            const widthA = Math.hypot(br.x - bl.x, br.y - bl.y);
+            const widthB = Math.hypot(tr.x - tl.x, tr.y - tl.y);
+            const maxW = Math.max(Math.round(widthA), Math.round(widthB));
+            const heightA = Math.hypot(tr.x - br.x, tr.y - br.y);
+            const heightB = Math.hypot(tl.x - bl.x, tl.y - bl.y);
+            const maxH = Math.max(Math.round(heightA), Math.round(heightB));
+
+            // Create source canvas at original size
+            const srcCanvas = document.createElement('canvas');
+            srcCanvas.width = editorBaseImage.naturalWidth;
+            srcCanvas.height = editorBaseImage.naturalHeight;
+            srcCanvas.getContext('2d').drawImage(editorBaseImage, 0, 0);
+
+            const src = cv.imread(srcCanvas);
+            const srcPts = cv.matFromArray(4, 1, cv.CV_32FC2, [
+                tl.x, tl.y, tr.x, tr.y, br.x, br.y, bl.x, bl.y
+            ]);
+            const dstPts = cv.matFromArray(4, 1, cv.CV_32FC2, [
+                0, 0, maxW - 1, 0, maxW - 1, maxH - 1, 0, maxH - 1
+            ]);
+            const M = cv.getPerspectiveTransform(srcPts, dstPts);
+            const warped = new cv.Mat();
+            cv.warpPerspective(src, warped, M, new cv.Size(maxW, maxH));
+
+            const outCanvas = document.createElement('canvas');
+            cv.imshow(outCanvas, warped);
+
+            src.delete(); srcPts.delete(); dstPts.delete(); M.delete(); warped.delete();
+
+            await commitEditedCanvas(outCanvas);
+        }
+
+        // ── MODE 3: AUTO ALIGN (full pipeline preview) ──
+        function initAutoMode() {
+            editorImg.src = editorBaseImage.src;
+            editorImg.style.display = 'block';
+
+            editorControls.innerHTML = `
+                <div class="ctrl-row" style="font-size: 0.85rem; color: var(--muted);">
+                    ⚡ المحاذاة التلقائية تكشف حدود المستند وتصححها فوراً
+                </div>
+                <div class="ctrl-row">
+                    <button class="ctrl-btn primary" id="runAutoBtn">⚡ تشغيل المحاذاة التلقائية</button>
+                    <button class="ctrl-btn warn" id="runEnhanceBtn">✨ محاذاة + تحسين الجودة</button>
+                </div>
+                <div class="ctrl-row" style="justify-content: flex-end;">
+                    <button class="ctrl-btn success" id="applyAuto" disabled>✓ تطبيق</button>
+                </div>
+            `;
+
+            let pendingCanvas = null;
+            const applyBtn = document.getElementById('applyAuto');
+
+            const runAutoFn = async (withEnhance) => {
+                if (!cvReady) { showFlash('OpenCV لم يكتمل تحميله بعد.'); return; }
+                const tmpCanvas = document.createElement('canvas');
+                tmpCanvas.width = editorBaseImage.naturalWidth;
+                tmpCanvas.height = editorBaseImage.naturalHeight;
+                tmpCanvas.getContext('2d').drawImage(editorBaseImage, 0, 0);
+
+                let src = null, aligned = null, enhanced = null;
+                try {
+                    src = cv.imread(tmpCanvas);
+                    aligned = detectAndAlign(src);
+                    src.delete(); src = null;
+
+                    let finalMat = aligned;
+                    if (withEnhance) {
+                        enhanced = enhanceImage(aligned);
+                        aligned.delete(); aligned = null;
+                        finalMat = enhanced;
+                    }
+
+                    const out = document.createElement('canvas');
+                    cv.imshow(out, finalMat);
+                    finalMat.delete();
+
+                    pendingCanvas = out;
+                    editorImg.src = out.toDataURL('image/jpeg', 0.95);
+                    applyBtn.disabled = false;
+                    showFlash('تمت المحاذاة بنجاح ✓', 'success');
+                } catch (e) {
+                    console.error(e);
+                    if (src) try { src.delete(); } catch(_){}
+                    if (aligned) try { aligned.delete(); } catch(_){}
+                    if (enhanced) try { enhanced.delete(); } catch(_){}
+                    showFlash('فشلت المحاذاة التلقائية. جرب الوضع اليدوي.');
+                }
+            };
+
+            document.getElementById('runAutoBtn').onclick = () => runAutoFn(false);
+            document.getElementById('runEnhanceBtn').onclick = () => runAutoFn(true);
+            applyBtn.onclick = async () => {
+                if (pendingCanvas) await commitEditedCanvas(pendingCanvas);
+            };
+        }
+
+        // ── MODE 4: FILTERS & ENHANCE ──
+        function initFilterMode() {
+            editorImg.src = editorBaseImage.src;
+            editorImg.style.display = 'block';
+            applyFilterToImage();
+
+            editorControls.innerHTML = `
+                <div class="filter-chips">
+                    <button class="filter-chip ${activeFilter==='none'?'active':''}" data-filter="none">الأصلي</button>
+                    <button class="filter-chip ${activeFilter==='gray'?'active':''}" data-filter="gray">رمادي</button>
+                    <button class="filter-chip ${activeFilter==='bw'?'active':''}" data-filter="bw">أبيض/أسود</button>
+                    <button class="filter-chip ${activeFilter==='document'?'active':''}" data-filter="document">مستند</button>
+                    <button class="filter-chip ${activeFilter==='sepia'?'active':''}" data-filter="sepia">قديم</button>
+                    <button class="filter-chip ${activeFilter==='vivid'?'active':''}" data-filter="vivid">حيوي</button>
+                </div>
+                <div class="slider-row">
+                    <label>السطوع</label>
+                    <input type="range" id="brightSl" min="50" max="200" value="${filterValues.brightness}">
+                    <span class="val" id="brightVal">${filterValues.brightness}%</span>
+                </div>
+                <div class="slider-row">
+                    <label>التباين</label>
+                    <input type="range" id="contSl" min="50" max="200" value="${filterValues.contrast}">
+                    <span class="val" id="contVal">${filterValues.contrast}%</span>
+                </div>
+                <div class="slider-row">
+                    <label>التشبع</label>
+                    <input type="range" id="satSl" min="0" max="200" value="${filterValues.saturate}">
+                    <span class="val" id="satVal">${filterValues.saturate}%</span>
+                </div>
+                <div class="ctrl-row" style="justify-content: space-between;">
+                    <button class="ctrl-btn" id="resetFilter">🔄 إعادة تعيين</button>
+                    <button class="ctrl-btn success" id="applyFilter">✓ تطبيق وحفظ</button>
+                </div>
+            `;
+
+            document.querySelectorAll('.filter-chip').forEach(chip => {
+                chip.onclick = () => {
+                    activeFilter = chip.dataset.filter;
+                    document.querySelectorAll('.filter-chip').forEach(c => c.classList.toggle('active', c === chip));
+                    applyFilterToImage();
+                };
+            });
+
+            const bind = (id, key, suffix='%') => {
+                const sl = document.getElementById(id);
+                const val = document.getElementById(id.replace('Sl','Val'));
+                sl.oninput = () => {
+                    filterValues[key] = parseInt(sl.value);
+                    val.textContent = sl.value + suffix;
+                    applyFilterToImage();
+                };
+            };
+            bind('brightSl', 'brightness');
+            bind('contSl', 'contrast');
+            bind('satSl', 'saturate');
+
+            document.getElementById('resetFilter').onclick = () => {
+                activeFilter = 'none';
+                filterValues = { brightness: 100, contrast: 100, saturate: 100 };
+                initFilterMode();
+            };
+
+            document.getElementById('applyFilter').onclick = applyFilterResult;
+        }
+
+        function buildFilterCSS() {
+            let f = `brightness(${filterValues.brightness}%) contrast(${filterValues.contrast}%) saturate(${filterValues.saturate}%)`;
+            if (activeFilter === 'gray') f += ' grayscale(100%)';
+            else if (activeFilter === 'bw') f += ' grayscale(100%) contrast(140%) brightness(110%)';
+            else if (activeFilter === 'document') f += ' grayscale(20%) contrast(125%) brightness(108%)';
+            else if (activeFilter === 'sepia') f += ' sepia(80%)';
+            else if (activeFilter === 'vivid') f += ' saturate(140%) contrast(115%)';
+            return f;
+        }
+
+        function applyFilterToImage() {
+            editorImg.style.filter = buildFilterCSS();
+        }
+
+        async function applyFilterResult() {
+            const iw = editorBaseImage.naturalWidth;
+            const ih = editorBaseImage.naturalHeight;
+            const out = document.createElement('canvas');
+            out.width = iw; out.height = ih;
+            const ctx = out.getContext('2d');
+            ctx.filter = buildFilterCSS();
+            ctx.drawImage(editorBaseImage, 0, 0, iw, ih);
+            await commitEditedCanvas(out);
+        }
+
+        // ── COMMIT EDIT TO STATE ──
+        async function commitEditedCanvas(canvas) {
+            const blob = await new Promise(r => canvas.toBlob(r, 'image/jpeg', 0.92));
+            if (!blob) { showFlash('فشل حفظ التعديل.'); return; }
+            const oldEntry = selectedFiles[editorIndex];
+            const newFile = new File(
+                [blob],
+                (oldEntry.originalFile.name || 'edited').replace(/\.[^/.]+$/, '') + '_edited.jpg',
+                { type: 'image/jpeg' }
+            );
+            selectedFiles[editorIndex] = {
+                file: newFile,
+                edited: true,
+                originalFile: oldEntry.originalFile
+            };
+            showFlash('تم حفظ التعديل ✓', 'success');
+            closeEditor();
+            updateUI();
+        }
+
+        // ══════════════════════════════════════════
+        //  IMAGE LOADING (preserved)
         // ══════════════════════════════════════════
         function loadImageToCanvas(file) {
             return new Promise((resolve, reject) => {
@@ -747,28 +1665,96 @@
         }
 
         // ══════════════════════════════════════════
-        //  OPENCV: ORDER POINTS
+        //  OPENCV: ORDER POINTS (preserved)
         // ══════════════════════════════════════════
         function orderPoints(pts) {
-            // pts is array of {x, y}
             pts.sort((a, b) => (a.x + a.y) - (b.x + b.y));
-            const tl = pts[0],
-                br = pts[3];
+            const tl = pts[0], br = pts[3];
             const rem = [pts[1], pts[2]];
             rem.sort((a, b) => (a.x - a.y) - (b.x - b.y));
-            return [tl, rem[0], br, rem[1]]; // TL, TR, BR, BL
+            return [tl, rem[0], br, rem[1]];
         }
 
         // ══════════════════════════════════════════
-        //  OPENCV: DOCUMENT DETECT + ALIGN
+        //  OPENCV: DETECT CORNERS ONLY (returns 4 points or null)
+        // ══════════════════════════════════════════
+        function detectCornersOnly(canvasEl) {
+            // Returns array of {x,y} in original coords or null
+            let src = cv.imread(canvasEl);
+            try {
+                const origH = src.rows, origW = src.cols;
+                const ratio = origH > 1000 ? origH / 1000 : 1;
+                const rH = Math.round(origH / ratio), rW = Math.round(origW / ratio);
+
+                let resized = new cv.Mat();
+                cv.resize(src, resized, new cv.Size(rW, rH));
+
+                let gray = new cv.Mat();
+                cv.cvtColor(resized, gray, cv.COLOR_RGBA2GRAY);
+                resized.delete();
+
+                cv.GaussianBlur(gray, gray, new cv.Size(5, 5), 0);
+
+                let edges = new cv.Mat();
+                cv.Canny(gray, edges, 75, 200);
+                gray.delete();
+
+                // Morphological dilate to close gaps
+                let kernel = cv.Mat.ones(3, 3, cv.CV_8U);
+                cv.dilate(edges, edges, kernel);
+                kernel.delete();
+
+                let contours = new cv.MatVector();
+                let hierarchy = new cv.Mat();
+                cv.findContours(edges, contours, hierarchy, cv.RETR_LIST, cv.CHAIN_APPROX_SIMPLE);
+                edges.delete(); hierarchy.delete();
+
+                let areas = [];
+                for (let i = 0; i < contours.size(); i++) {
+                    areas.push({ i, area: cv.contourArea(contours.get(i)) });
+                }
+                areas.sort((a, b) => b.area - a.area);
+
+                let screenCnt = null;
+                for (let k = 0; k < Math.min(areas.length, 10); k++) {
+                    const cnt = contours.get(areas[k].i);
+                    const peri = cv.arcLength(cnt, true);
+                    let approx = new cv.Mat();
+                    cv.approxPolyDP(cnt, approx, 0.02 * peri, true);
+                    if (approx.rows === 4) {
+                        screenCnt = approx;
+                        break;
+                    }
+                    approx.delete();
+                }
+                contours.delete();
+
+                if (!screenCnt) { src.delete(); return null; }
+
+                const pts = [];
+                for (let i = 0; i < 4; i++) {
+                    pts.push({
+                        x: screenCnt.data32S[i * 2] * ratio,
+                        y: screenCnt.data32S[i * 2 + 1] * ratio
+                    });
+                }
+                screenCnt.delete();
+                src.delete();
+
+                return orderPoints(pts);
+            } catch (e) {
+                try { src.delete(); } catch(_){}
+                return null;
+            }
+        }
+
+        // ══════════════════════════════════════════
+        //  OPENCV: DOCUMENT DETECT + ALIGN (preserved)
         // ══════════════════════════════════════════
         function detectAndAlign(src) {
-            // src: RGBA Mat
-            const origH = src.rows,
-                origW = src.cols;
+            const origH = src.rows, origW = src.cols;
             const ratio = origH > 1000 ? origH / 1000 : 1;
-            const rH = Math.round(origH / ratio),
-                rW = Math.round(origW / ratio);
+            const rH = Math.round(origH / ratio), rW = Math.round(origW / ratio);
 
             let resized = new cv.Mat();
             cv.resize(src, resized, new cv.Size(rW, rH));
@@ -783,13 +1769,17 @@
             cv.Canny(gray, edges, 75, 200);
             gray.delete();
 
+            // Modern enhancement: dilate edges to better connect document borders
+            let kernel = cv.Mat.ones(3, 3, cv.CV_8U);
+            cv.dilate(edges, edges, kernel);
+            kernel.delete();
+
             let contours = new cv.MatVector();
             let hierarchy = new cv.Mat();
             cv.findContours(edges, contours, hierarchy, cv.RETR_LIST, cv.CHAIN_APPROX_SIMPLE);
             edges.delete();
             hierarchy.delete();
 
-            // Collect areas
             let areas = [];
             for (let i = 0; i < contours.size(); i++) {
                 areas.push({ i, area: cv.contourArea(contours.get(i)) });
@@ -812,7 +1802,6 @@
 
             if (!screenCnt) return src.clone();
 
-            // Extract points and scale back to original
             const pts = [];
             for (let i = 0; i < 4; i++) {
                 pts.push({
@@ -852,14 +1841,12 @@
         }
 
         // ══════════════════════════════════════════
-        //  OPENCV: IMAGE ENHANCEMENT
+        //  OPENCV: IMAGE ENHANCEMENT (preserved)
         // ══════════════════════════════════════════
         function enhanceImage(src) {
-            // src: RGBA Mat → returns RGBA Mat
             let bgr = new cv.Mat();
             cv.cvtColor(src, bgr, cv.COLOR_RGBA2BGR);
 
-            // CLAHE on L channel in LAB
             let lab = new cv.Mat();
             cv.cvtColor(bgr, lab, cv.COLOR_BGR2Lab);
 
@@ -870,7 +1857,7 @@
                 let clahe = cv.createCLAHE(2.0, new cv.Size(8, 8));
                 clahe.apply(channels.get(0), channels.get(0));
                 clahe.delete();
-            } catch (e) { /* skip if not available */ }
+            } catch (e) { /* skip */ }
 
             cv.merge(channels, lab);
             channels.delete();
@@ -878,14 +1865,12 @@
             cv.cvtColor(lab, bgr, cv.COLOR_Lab2BGR);
             lab.delete();
 
-            // Sharpening kernel
             let kernel = cv.matFromArray(3, 3, cv.CV_32F, [0, -1, 0, -1, 5, -1, 0, -1, 0]);
             let sharp = new cv.Mat();
             cv.filter2D(bgr, sharp, -1, kernel);
             kernel.delete();
             bgr.delete();
 
-            // Back to RGBA
             let rgba = new cv.Mat();
             cv.cvtColor(sharp, rgba, cv.COLOR_BGR2RGBA);
             sharp.delete();
@@ -894,48 +1879,56 @@
         }
 
         // ══════════════════════════════════════════
-        //  PROCESS ONE IMAGE → OUTPUT CANVAS
+        //  PROCESS ONE IMAGE → OUTPUT CANVAS (preserved)
+        //  If image was already edited by user, skip auto-align
         // ══════════════════════════════════════════
-        async function processImage(file) {
-            const inputCanvas = await loadImageToCanvas(file);
+        async function processImage(entry) {
+            const inputCanvas = await loadImageToCanvas(entry.file);
 
-            if (!cvReady) return inputCanvas; // fallback: no OpenCV
+            // If user already edited it manually, just enhance lightly (or skip CV)
+            if (entry.edited) {
+                if (!cvReady) return inputCanvas;
+                let src = null, enhanced = null;
+                try {
+                    src = cv.imread(inputCanvas);
+                    enhanced = enhanceImage(src);
+                    src.delete(); src = null;
+                    const out = document.createElement('canvas');
+                    cv.imshow(out, enhanced);
+                    enhanced.delete();
+                    return out;
+                } catch (e) {
+                    if (src) try { src.delete(); } catch(_){}
+                    if (enhanced) try { enhanced.delete(); } catch(_){}
+                    return inputCanvas;
+                }
+            }
 
-            let src = null,
-                aligned = null,
-                enhanced = null;
+            if (!cvReady) return inputCanvas;
+
+            let src = null, aligned = null, enhanced = null;
             const outCanvas = document.createElement('canvas');
 
             try {
                 src = cv.imread(inputCanvas);
-
-                // 1. Detect & align
                 aligned = detectAndAlign(src);
-                src.delete();
-                src = null;
-
-                // 2. Enhance
+                src.delete(); src = null;
                 enhanced = enhanceImage(aligned);
-                aligned.delete();
-                aligned = null;
-
-                // 3. Render to canvas
+                aligned.delete(); aligned = null;
                 cv.imshow(outCanvas, enhanced);
-                enhanced.delete();
-                enhanced = null;
-
+                enhanced.delete(); enhanced = null;
                 return outCanvas;
             } catch (err) {
                 console.warn('OpenCV error, using original:', err);
-                if (src) { try { src.delete(); } catch (_) {} }
-                if (aligned) { try { aligned.delete(); } catch (_) {} }
-                if (enhanced) { try { enhanced.delete(); } catch (_) {} }
+                if (src) try { src.delete(); } catch(_){}
+                if (aligned) try { aligned.delete(); } catch(_){}
+                if (enhanced) try { enhanced.delete(); } catch(_){}
                 return inputCanvas;
             }
         }
 
         // ══════════════════════════════════════════
-        //  BUILD A4 PAGE CANVAS
+        //  BUILD A4 PAGE CANVAS (preserved)
         // ══════════════════════════════════════════
         async function buildA4Page(imgCanvas, nameText) {
             await document.fonts.ready;
@@ -945,14 +1938,12 @@
             page.height = A4_H;
             const ctx = page.getContext('2d');
 
-            // White background
             ctx.fillStyle = '#FFFFFF';
             ctx.fillRect(0, 0, A4_W, A4_H);
 
             const MARGIN = 60;
             let topOffset = MARGIN;
 
-            // Draw name if provided
             if (nameText && nameText.trim()) {
                 const fontSize = 52;
                 ctx.font = `700 ${fontSize}px Cairo`;
@@ -967,7 +1958,6 @@
                 const boxX = (A4_W - textW - 60) / 2;
                 const boxY = MARGIN - 10;
 
-                // Badge background
                 ctx.fillStyle = '#F5F5F5';
                 ctx.strokeStyle = '#E0E0E0';
                 ctx.lineWidth = 2;
@@ -981,7 +1971,6 @@
                 topOffset = MARGIN + boxH + 20;
             }
 
-            // Fit image in remaining space
             const availW = A4_W - MARGIN * 2;
             const availH = A4_H - topOffset - MARGIN;
             const scale = Math.min(availW / imgCanvas.width, availH / imgCanvas.height);
@@ -1010,12 +1999,14 @@
         }
 
         // ══════════════════════════════════════════
-        //  MAIN: CONVERT → PDF
+        //  MAIN: CONVERT → PDF (preserved)
         // ══════════════════════════════════════════
         document.getElementById('convertBtn').addEventListener('click', async () => {
             if (!selectedFiles.length) return;
-            if (!cvReady) { showFlash('المحرك لا يزال يُحمَّل، انتظر لحظة...');
-                return; }
+            if (!cvReady) {
+                showFlash('المحرك لا يزال يُحمَّل، انتظر لحظة...');
+                return;
+            }
 
             const name = document.getElementById('nameInput').value.trim();
             const btn = document.getElementById('convertBtn');
@@ -1031,7 +2022,6 @@
                     const pct = Math.round(((i) / selectedFiles.length) * 90);
                     setProgress(pct, `معالجة صورة ${i + 1} من ${selectedFiles.length}...`);
 
-                    // Yield to browser between images
                     await new Promise(r => setTimeout(r, 10));
 
                     const processed = await processImage(selectedFiles[i]);
@@ -1060,5 +2050,9 @@
             }
         });
     </script>
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"4edd5f8ec12a48cfa682ab8261b80a79","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
+</body>
+</html>
+
 </body>
 </html>
