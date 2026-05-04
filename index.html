@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>محول الصور إلى PDF</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+</head>
+<body>
+  <div class="app-shell">
+    <header class="hero-card">
+      <div>
+        <span class="badge">واجهة ويب موبايل</span>
+        <h1>تحويل الصور إلى PDF</h1>
+        <p>
+          ارفع صورة واحدة أو عدة صور، حسّنها تلقائيًا، أضف الاسم أعلى الصفحة،
+          ثم نزّل ملف PDF جاهز للطباعة أو المشاركة.
+        </p>
+      </div>
+      <div class="hero-icon">📄</div>
+    </header>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <section class="alerts">
+          {% for category, message in messages %}
+            <div class="alert {{ category }}">{{ message }}</div>
+          {% endfor %}
+        </section>
+      {% endif %}
+    {% endwith %}
+
+    <main class="form-card">
+      <form action="{{ url_for('convert') }}" method="post" enctype="multipart/form-data" id="uploadForm">
+        <label class="field-label">الاسم المضاف أعلى كل صفحة</label>
+        <input type="text" name="name" class="text-input" placeholder="مثال: أحمد محمد" />
+
+        <label class="field-label">الصور</label>
+        <label class="upload-box" for="images">
+          <input id="images" type="file" name="images" accept="image/*" multiple required />
+          <div class="upload-content">
+            <div class="upload-icon">📷</div>
+            <strong>اضغط لاختيار الصور</strong>
+            <span>يدعم صور متعددة بصيغ JPG / PNG / WEBP</span>
+          </div>
+        </label>
+
+        <div id="previewList" class="preview-list"></div>
+
+        <div class="features-grid">
+          <div class="feature-item">✅ تحسين وضوح الصورة</div>
+          <div class="feature-item">✅ محاذاة الورقة تلقائيًا</div>
+          <div class="feature-item">✅ دعم عدة صور في ملف واحد</div>
+          <div class="feature-item">✅ تصميم مناسب للموبايل</div>
+        </div>
+
+        <button type="submit" class="submit-btn">إنشاء ملف PDF</button>
+      </form>
+    </main>
+
+    <section class="help-card">
+      <h2>طريقة الاستخدام</h2>
+      <ol>
+        <li>اكتب الاسم إذا كنت تريد ظهوره أعلى الصفحة.</li>
+        <li>اختر صورة واحدة أو أكثر من الهاتف.</li>
+        <li>اضغط على زر إنشاء ملف PDF.</li>
+        <li>سيتم تنزيل الملف مباشرة بعد المعالجة.</li>
+      </ol>
+      <p class="note">يفضل تصوير الورقة بإضاءة جيدة وخلفية واضحة للحصول على أفضل محاذاة.</p>
+    </section>
+  </div>
+
+  <script>
+    const input = document.getElementById('images');
+    const previewList = document.getElementById('previewList');
+
+    input.addEventListener('change', () => {
+      previewList.innerHTML = '';
+      const files = Array.from(input.files || []);
+
+      files.forEach((file, index) => {
+        const card = document.createElement('div');
+        card.className = 'preview-card';
+
+        const img = document.createElement('img');
+        img.alt = file.name;
+        img.src = URL.createObjectURL(file);
+
+        const meta = document.createElement('div');
+        meta.className = 'preview-meta';
+        meta.innerHTML = `<strong>صورة ${index + 1}</strong><span>${file.name}</span>`;
+
+        card.appendChild(img);
+        card.appendChild(meta);
+        previewList.appendChild(card);
+      });
+    });
+  </script>
+</body>
+</html>
